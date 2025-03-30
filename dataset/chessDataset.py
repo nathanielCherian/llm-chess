@@ -115,6 +115,7 @@ Arguments of ChessDataset and default values:
     save_processed_to_json=None     Path to save .json file containing processed subset of games
     end_in='both'                   Which player should make the next move, effectively always sets use_addendum=True
     use_addendum=False              Whether or not to add ' number. ' or ' ' to the end of moves, only applicable when end_in='both'
+    random_seed=None                Seed the randomness for reproduction
 """
 
 if __name__ == '__main__':
