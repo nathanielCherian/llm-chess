@@ -96,7 +96,7 @@ Arguments of ChessDataset and default values:
 
 if __name__ == '__main__':
     # Load the dataset
-    dataset = ChessDataset(saved_data_path='data/subset_data.npy', num_games=10_000)
+    dataset = ChessDataset(pgn_path='data/lichess_db_standard_rated_2017-02.pgn', num_games=10_000)
     dataloader = DataLoader(dataset)
 
     print('Enumerating dataset')
