@@ -1,6 +1,7 @@
 import io
 import random
 import json
+import os
 
 import chess.pgn
 from stockfish import Stockfish
@@ -12,7 +13,7 @@ import numpy as np
 
 class ChessDataset(Dataset):
     def __init__(self, num_games=100, num_random_moves=0, use_FEN=False, pgn_path=None, saved_data_path=None, save_data_to_path=None,
-                 save_processed_to_json=None, end_in='both', use_addendum=False, random_seed=None, use_best_move=False):
+                 save_processed_to_json=None, end_in='both', use_addendum=False, random_seed=None, use_best_move=False, stockfish_path=None):
         if random_seed is not None:
             random.seed(random_seed)
 
@@ -22,7 +23,16 @@ class ChessDataset(Dataset):
         self.end_in = end_in
         self.use_addendum = use_addendum
         self.use_best_move = use_best_move
-        self.stockfish = Stockfish(path="stockfish/stockfish-windows-x86-64-avx2.exe")
+
+        if stockfish_path is None and use_best_move:
+            print('*** Must have stockfish to use best move ***')
+            exit(1)
+        if stockfish_path is not None and not os.path.exists(stockfish_path):
+            print('*** Stockfish does not exist ***')
+            exit(1)
+
+        if self.use_best_move:
+            self.stockfish = Stockfish(path=stockfish_path)
 
         if save_data_to_path is not None and pgn_path is None:
             print('*** Can only save data read from pgn_path ***')
@@ -124,11 +134,24 @@ Arguments of ChessDataset and default values:
     use_addendum=False              Whether or not to add ' number. ' or ' ' to the end of moves, only applicable when end_in='both'
     random_seed=None                Seed the randomness for reproduction
     use_best_move=False             Whether the best move is returned as the label instead of the actual move (works with random moves)
+    stockfish_path                  The path to the .exe stockfish file
 """
 
 if __name__ == '__main__':
     num_games = 100
     seed = 577
+
+    # Load dataset to use stockfish evcaluation best moves and FEN format
+    dataset = ChessDataset(pgn_path='data/lichess_db_standard_rated_2017-02.pgn', num_games=num_games, use_FEN=True, use_best_move=True, stockfish_path='stockfish/stockfish-windows-x86-64-avx2.exe', random_seed=seed)
+    dataloader = DataLoader(dataset)
+
+    print('Enumerating dataset')
+    for i, (game, move) in enumerate(tqdm(dataloader)):
+        # Do stuff
+        pass
+
+    # Some games are empty (ie. 0 moves) or very short (ie. <= 1 moves), so total games is less than num_games
+    print(f'total games enumerated: {i+1}')
 
     # Save the processed dataset to a .json format (works with HuggingFace Trainers) with white to move next
     dataset = ChessDataset(pgn_path='data/lichess_db_standard_rated_2017-02.pgn', num_games=num_games, end_in='white', save_processed_to_json='data/subset_data.json', random_seed=seed)
@@ -142,7 +165,7 @@ if __name__ == '__main__':
         # Do stuff
         pass
 
-    # Some games are empty (ie. 0 moves) or very short (ie. <= 2 moves), so total games is less than num_games
+    # Some games are empty (ie. 0 moves) or very short (ie. <= 1 moves), so total games is less than num_games
     print(f'total games enumerated: {i+1}')
 
     """
@@ -163,7 +186,7 @@ if __name__ == '__main__':
         # Do stuff
         pass
 
-    # Some games are empty (ie. 0 moves) or very short (ie. <= 2 moves), so total games is less than num_games
+    # Some games are empty (ie. 0 moves) or very short (ie. <= 1 moves), so total games is less than num_games
     print(f'total games enumerated: {i+1}')
 
     """
