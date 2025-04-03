@@ -3,6 +3,7 @@ import random
 import json
 
 import chess.pgn
+from stockfish import Stockfish
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -11,7 +12,7 @@ import numpy as np
 
 class ChessDataset(Dataset):
     def __init__(self, num_games=100, num_random_moves=0, use_FEN=False, pgn_path=None, saved_data_path=None, save_data_to_path=None,
-                 save_processed_to_json=None, end_in='both', use_addendum=False, random_seed=None):
+                 save_processed_to_json=None, end_in='both', use_addendum=False, random_seed=None, use_best_move=False):
         if random_seed is not None:
             random.seed(random_seed)
 
@@ -20,6 +21,8 @@ class ChessDataset(Dataset):
         self.use_FEN = use_FEN
         self.end_in = end_in
         self.use_addendum = use_addendum
+        self.use_best_move = use_best_move
+        self.stockfish = Stockfish(path="stockfish/stockfish-windows-x86-64-avx2.exe")
 
         if save_data_to_path is not None and pgn_path is None:
             print('*** Can only save data read from pgn_path ***')
@@ -93,6 +96,10 @@ class ChessDataset(Dataset):
             r_move = legal_moves[move_idx]
             board.push(r_move)
 
+        if self.use_best_move:
+            self.stockfish.set_fen_position(board.fen())
+            next_move = board.san(board.parse_uci(self.stockfish.get_best_move()))
+
         if self.use_FEN:
             return board.fen(), next_move
         return str(chess.pgn.Game.from_board(board).mainline_moves()) + addendum, next_move
@@ -119,7 +126,7 @@ Arguments of ChessDataset and default values:
 """
 
 if __name__ == '__main__':
-    num_games = 10_000
+    num_games = 100
     seed = 577
 
     # Save the processed dataset to a .json format (works with HuggingFace Trainers) with white to move next
