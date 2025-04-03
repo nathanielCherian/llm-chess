@@ -123,6 +123,7 @@ Arguments of ChessDataset and default values:
     end_in='both'                   Which player should make the next move, effectively always sets use_addendum=True
     use_addendum=False              Whether or not to add ' number. ' or ' ' to the end of moves, only applicable when end_in='both'
     random_seed=None                Seed the randomness for reproduction
+    use_best_move=False             Whether the best move is returned as the label instead of the actual move (works with random moves)
 """
 
 if __name__ == '__main__':
