@@ -10,10 +10,12 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 
+# For multi threading
+from joblib import Parallel, delayed
 
 class ChessDataset(Dataset):
     def __init__(self, num_games=100, num_random_moves=0, use_FEN=False, pgn_path=None, saved_data_path=None, save_data_to_path=None,
-                 save_processed_to_json=None, end_in='both', use_addendum=False, random_seed=None, use_best_move=False, stockfish_path=None):
+                 save_processed_to_json=None, end_in='both', use_addendum=False, random_seed=None, use_best_move=False, stockfish_path=None, offset=0):
         if random_seed is not None:
             random.seed(random_seed)
 
@@ -23,6 +25,7 @@ class ChessDataset(Dataset):
         self.end_in = end_in
         self.use_addendum = use_addendum
         self.use_best_move = use_best_move
+        self.offset = offset
 
         if stockfish_path is None and use_best_move:
             print('*** Must have stockfish to use best move ***')
@@ -45,8 +48,13 @@ class ChessDataset(Dataset):
         if pgn_path is not None and saved_data_path is None:
             self.dataset = open(pgn_path)
 
+            for _ in range(self.offset):
+              chess.pgn.read_game(self.dataset)
+
             print('Loading games from .pgn')
+            games = [str(chess.pgn.read_game(self.dataset).mainline_moves()) for _ in tqdm(range(self.num_games))]
             self.games = [self.process_game(str(chess.pgn.read_game(self.dataset).mainline_moves())) for _ in tqdm(range(self.num_games))]
+            #self.games = Parallel(n_jobs=40)(delayed(self.process_game)(game) for game in games)
             self.games = [g for g in self.games if g is not None]
 
             if save_data_to_path is not None:
