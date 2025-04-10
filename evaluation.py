@@ -590,16 +590,15 @@ def getIllegalMoveType(fen, board, san):
 
 
 
-def evaluate_position(fen, san):
+def evaluate_position(fen, san, time=0.1):
     board = chess.Board(fen)
     engine = chess.engine.SimpleEngine.popen_uci("stockfish/stockfish-windows-x86-64-avx2.exe")
-    limit = chess.engine.Limit(time=0.1)
+    limit = chess.engine.Limit(time=time)
 
     try:
         board.parse_san(san)
         board.push_san(san)
         info = engine.analyse(board, limit)
-        engine.quit()
         
         if "score" in info:
             bound = 1000
@@ -637,6 +636,8 @@ def evaluate_position(fen, san):
             return (0, 'getIllegalMoveType error')
     except:
             return (0, 'Unknown error')
+    finally:
+        engine.quit()
 
 if __name__ == "__main__":
     # Example usage
