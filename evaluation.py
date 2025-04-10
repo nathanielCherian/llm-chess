@@ -13,6 +13,9 @@ import chess.engine
 import chess.pgn
 
 
+import traceback
+
+
 
 # ------------------------------
 #      FEN Helper functions
@@ -387,9 +390,9 @@ def castlingRights(fen, move_type, white_to_move):
     return True
 
 
-def getIllegalMoveType(board, san):
+def getIllegalMoveType(fen, board, san):
     matrix = fen_to_matrix(fen)
-    print(matrix)
+    #print(matrix)
 
     white_to_move = 'white' if board.turn else 'black'
 
@@ -419,7 +422,7 @@ def getIllegalMoveType(board, san):
     # Get the move type and positions
     move_type, positions = getMoveInfo(san, white_to_move, matrix)
 
-    print(move_type, positions)
+    #print(move_type, positions)
 
 
     # Check if the move is unknown
@@ -536,8 +539,8 @@ def getIllegalMoveType(board, san):
         elif piece_type == 'P':
             reaching, aligned = pawnsReachingDst(positions, 'P', white_to_move, matrix, move_type, en_passant_pos)
             
-        print(reaching)
-        print(aligned)
+        #print(reaching)
+        #print(aligned)
 
         # Check if no piece can reach the destination
         if len(reaching) == 0:
@@ -549,7 +552,7 @@ def getIllegalMoveType(board, san):
         src = chr(reaching[0][1] + ord('a')) + str(8 - reaching[0][0])
         dst = chr(positions[3] + ord('a')) + str(8 - positions[2])
 
-        print(src, dst)
+        #print(src, dst)
 
         trial_board = chess.Board(board.fen())
         trial_board.set_piece_at(chess.parse_square(src), None)
@@ -558,7 +561,7 @@ def getIllegalMoveType(board, san):
         trial_board.set_piece_at(chess.parse_square(dst), piece)
 
         new_matrix = fen_to_matrix(trial_board.fen())
-        print(new_matrix)
+        #print(new_matrix)
 
         if failToRemoveCheck(board, trial_board):
             return 'Move keeps king in check'
@@ -614,8 +617,10 @@ def evaluate_position(fen, san):
         return (0, 'Ambiguous format')
     except chess.IllegalMoveError:
         try:
-            return (0, getIllegalMoveType(board, san))
-        except:
+            return (0, getIllegalMoveType(fen, board, san))
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
             return (0, 'getIllegalMoveType error')
     except:
             return (0, 'Unknown error')
@@ -623,7 +628,7 @@ def evaluate_position(fen, san):
 if __name__ == "__main__":
     # Example usage
     fen = "rnbqkbnr/pppppppp/8/8/RRP4R/2q5/PP1PPPPP/R3KBNR w KQkq - 0 1"
-    san = "O-O-O"
+    san = "e5"
     
     score, message = evaluate_position(fen, san)
     print(f"Score: {score}, Message: {message}")
