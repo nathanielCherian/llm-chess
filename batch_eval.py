@@ -25,8 +25,8 @@ def get_eval(game, move):
         engine.quit()
 
 
-def batch_eval(games, moves, n_jobs):
-    ret = Parallel(n_jobs=n_jobs)(delayed(evaluate_position)(g, m) for g, m in zip(games, moves))
+def batch_eval(games, moves, n_jobs, time=0.1):
+    ret = Parallel(n_jobs=n_jobs)(delayed(evaluate_position)(g, m, time) for g, m in zip(games, moves))
     return ret
 
 
