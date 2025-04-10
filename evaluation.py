@@ -1,3 +1,6 @@
+# NOTE: you must call the globals to set up the engine, then it will run until you call engine.quit()
+
+
 # -----------------
 #      Imports
 # -----------------
@@ -7,13 +10,22 @@
 import numpy as np
 import re
 
-from stockfish import Stockfish
 import chess
 import chess.engine
 import chess.pgn
 
-
 import traceback
+
+
+
+# -----------------
+#      Globals
+# -----------------
+
+
+
+engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
+limit = chess.engine.Limit(time=0.1)
 
 
 
@@ -547,7 +559,7 @@ def getIllegalMoveType(fen, board, san):
             if len(aligned) > 0:
                 return 'Attempting to move blocked piece'
             else:
-                return 'No piece to capture / move'
+                return 'No piece reaches destination'
 
         src = chr(reaching[0][1] + ord('a')) + str(8 - reaching[0][0])
         dst = chr(positions[3] + ord('a')) + str(8 - positions[2])
@@ -584,32 +596,33 @@ def getIllegalMoveType(fen, board, san):
 def evaluate_position(fen, san):
     board = chess.Board(fen)
 
-    stockfish = Stockfish(path="/usr/local/bin/stockfish", depth=20)
-    stockfish.set_fen_position(fen)
-    stockfish.set_skill_level(20)
-
-    score = 0
-
-
     try:
-        move = board.parse_san(san)
+        board.parse_san(san)
 
-        # Update Stockfish with the new position
-        stockfish.set_fen_position(board.fen())
-
-        # Get the evaluation score from Stockfish
-        eval_info = stockfish.get_evaluation()
+        info = engine.analyse(board, limit)
         
-        normalized_score = 0
-        if eval_info["type"] == "cp":  # Centipawn evaluation
-            score = eval_info["value"] / 100  # Convert to pawns
-            normalized_score = 1 / (1 + 10 ** (-score / 4))  # Sigmoid-like normalization
-        elif eval_info["type"] == "mate":  # Mate evaluation
-            normalized_score = 1 if eval_info["value"] > 0 else 0  # Win = 1, Loss = 0
-        else:
-            normalized_score = 0.5  # Neutral
+        if "score" in info:
+            bound = 1000
 
-        return (normalized_score, "Valid move")
+
+            # TODO: currently not using negative scores for black
+            score = info["score"].white() if board.turn else info["score"].black()
+            score = abs(score)
+
+
+            #print("Score:", score)
+
+            if score.is_mate():
+                mate = score.mate()
+                if mate > 0:
+                    return 1.0, "Valid move"
+                else:
+                    return 0.0, "Valid move"
+            else:
+                cp = max(min(score.score(), bound), - bound)
+                return (cp + bound) / (2 * bound), "Valid move"
+
+        return (0.5, "Valid move")
     
     except chess.InvalidMoveError:
         return (0, 'Bad format')
@@ -627,8 +640,11 @@ def evaluate_position(fen, san):
 
 if __name__ == "__main__":
     # Example usage
-    fen = "rnbqkbnr/pppppppp/8/8/RRP4R/2q5/PP1PPPPP/R3KBNR w KQkq - 0 1"
-    san = "e5"
+    fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0"
+    san = "e4"
     
     score, message = evaluate_position(fen, san)
     print(f"Score: {score}, Message: {message}")
+
+
+    engine.quit()
