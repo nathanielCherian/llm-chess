@@ -26,7 +26,7 @@ def get_eval(game, move):
 
 
 def batch_eval(games, moves, n_jobs):
-    ret = Parallel(n_jobs=n_jobs)(delayed(get_eval)(g, m) for g, m in zip(games, moves))
+    ret = Parallel(n_jobs=n_jobs)(delayed(evaluate_position)(g, m) for g, m in zip(games, moves))
     return ret
 
 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
             print(g, m)
 
         start = time.time()
-        evals = [evaluate_position(g, m)[0] for g, m in zip(games, moves)]
+        evals = [evaluate_position(g, m) for g, m in zip(games, moves)]
         end = time.time()
         print(f'\ntime elapsed: {end - start}')
         for e in evals:

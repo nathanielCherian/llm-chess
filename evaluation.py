@@ -1,3 +1,4 @@
+
 # NOTE: you must call the globals to set up the engine, then it will run until you call engine.quit()
 
 
@@ -22,10 +23,6 @@ import traceback
 #      Globals
 # -----------------
 
-
-
-engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
-limit = chess.engine.Limit(time=0.1)
 
 
 
@@ -595,11 +592,14 @@ def getIllegalMoveType(fen, board, san):
 
 def evaluate_position(fen, san):
     board = chess.Board(fen)
+    engine = chess.engine.SimpleEngine.popen_uci("stockfish/stockfish-windows-x86-64-avx2.exe")
+    limit = chess.engine.Limit(time=0.1)
 
     try:
         board.parse_san(san)
-
+        board.push_san(san)
         info = engine.analyse(board, limit)
+        engine.quit()
         
         if "score" in info:
             bound = 1000
@@ -646,5 +646,3 @@ if __name__ == "__main__":
     score, message = evaluate_position(fen, san)
     print(f"Score: {score}, Message: {message}")
 
-
-    engine.quit()
