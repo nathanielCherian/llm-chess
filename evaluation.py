@@ -1,4 +1,3 @@
-
 # NOTE: you must call the globals to set up the engine, then it will run until you call engine.quit()
 
 
@@ -23,6 +22,10 @@ import traceback
 #      Globals
 # -----------------
 
+
+
+engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
+limit = chess.engine.Limit(time=0.1)
 
 
 
@@ -590,10 +593,8 @@ def getIllegalMoveType(fen, board, san):
 
 
 
-def evaluate_position(fen, san, time=0.1):
+def evaluate_position(fen, san):
     board = chess.Board(fen)
-    engine = chess.engine.SimpleEngine.popen_uci("stockfish/stockfish-windows-x86-64-avx2.exe")
-    limit = chess.engine.Limit(time=time)
 
     try:
         board.parse_san(san)
@@ -603,13 +604,10 @@ def evaluate_position(fen, san, time=0.1):
         if "score" in info:
             bound = 1000
 
-
             # TODO: currently not using negative scores for black
-            score = info["score"].white() if board.turn else info["score"].black()
-            score = abs(score)
+            score = info["score"].white() if not board.turn else info["score"].black()
 
-
-            #print("Score:", score)
+            print("Score:", score)
 
             if score.is_mate():
                 mate = score.mate()
@@ -636,14 +634,14 @@ def evaluate_position(fen, san, time=0.1):
             return (0, 'getIllegalMoveType error')
     except:
             return (0, 'Unknown error')
-    finally:
-        engine.quit()
 
 if __name__ == "__main__":
     # Example usage
-    fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0"
+    fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/QQ1QKBNR w KQkq - 0 0"
     san = "e4"
     
     score, message = evaluate_position(fen, san)
     print(f"Score: {score}, Message: {message}")
 
+
+    engine.quit()
