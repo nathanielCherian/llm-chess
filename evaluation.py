@@ -605,8 +605,7 @@ def evaluate_position(fen, san, time=0.1):
 
 
             # TODO: currently not using negative scores for black
-            score = info["score"].white() if board.turn else info["score"].black()
-            score = abs(score)
+            score = info["score"].white() if not board.turn else info["score"].black()
 
 
             #print("Score:", score)
