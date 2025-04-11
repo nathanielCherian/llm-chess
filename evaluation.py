@@ -592,12 +592,15 @@ def getIllegalMoveType(fen, board, san):
 
 def evaluate_position(fen, san, time=0.1):
     board = chess.Board(fen)
-    engine = chess.engine.SimpleEngine.popen_uci("stockfish/stockfish-windows-x86-64-avx2.exe")
+    engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
     limit = chess.engine.Limit(time=time)
 
     try:
         board.parse_san(san)
         board.push_san(san)
+
+        #print("FEN:", board.fen())
+
         info = engine.analyse(board, limit)
         
         if "score" in info:
@@ -608,11 +611,11 @@ def evaluate_position(fen, san, time=0.1):
             score = info["score"].white() if not board.turn else info["score"].black()
 
 
-            #print("Score:", score)
+            print("Score:", score)
 
             if score.is_mate():
                 mate = score.mate()
-                if mate > 0:
+                if mate >= 0:
                     return 1.0, "Valid move"
                 else:
                     return 0.0, "Valid move"
@@ -640,8 +643,15 @@ def evaluate_position(fen, san, time=0.1):
 
 if __name__ == "__main__":
     # Example usage
-    fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0"
-    san = "e4"
+
+    fen = "7K/8/8/6r1/5q2/8/P7/6k1 w - - 0 1"
+    san = "a3"
+
+    #fen = "rnbqkbnr/pppppppp/8/8/7q/8/PPPPPPP1/RNBQK3 b KQkq - 0 0"
+    #san = "Qh1"
+
+    #fen = "rnbqk3/ppppppp1/8/8/7Q/8/PPPPPPP1/RNBQK3 w KQkq - 0 0"
+    #san = "Qh8"
     
     score, message = evaluate_position(fen, san)
     print(f"Score: {score}, Message: {message}")
