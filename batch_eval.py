@@ -5,6 +5,7 @@ import math
 from joblib import Parallel, delayed
 import chess
 import chess.engine
+from tqdm import tqdm
 
 from evaluation import evaluate_position
 
@@ -25,16 +26,19 @@ def get_eval(game, move):
         engine.quit()
 
 
-def batch_eval(games, moves, n_jobs, time=0.1):
-    ret = Parallel(n_jobs=n_jobs)(delayed(evaluate_position)(g, m, time) for g, m in zip(games, moves))
+def batch_eval(games, moves, n_jobs, time=0.1, enable_tqdm=True):
+    if enable_tqdm:
+        ret = Parallel(n_jobs=n_jobs)(delayed(evaluate_position)(g, m, time, return_score_only=True) for g, m in tqdm(zip(games, moves), total=len(games)))
+    else:
+        ret = Parallel(n_jobs=n_jobs)(delayed(evaluate_position)(g, m, time, return_score_only=True) for g, m in zip(games, moves))
     return ret
 
 
 if __name__ == '__main__':
     with open('data/subset_data.json', 'r') as file:
         data = json.load(file)[:10]
-        games = [d['prompt'] for d in data]
-        moves = [d['completion'] for d in data]
+        games = [d['prompt'] for d in data] + ['7K/8/8/6r1/5q2/8/P7/6k1 w - - 0 1'] * 2 + ['8/8/4k3/R7/2r5/5K2/6PP/8 w - - 0 51']
+        moves = [d['completion'] for d in data] + ['a3'] + ['nonesense'] + ['Rd6']
 
         for g, m in zip(games, moves):
             print(g, m)

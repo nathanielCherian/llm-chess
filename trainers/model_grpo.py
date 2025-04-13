@@ -1,61 +1,42 @@
+import time
+import os
+
 from datasets import load_dataset
 from trl import GRPOConfig, GRPOTrainer
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers import AutoModelForCausalLM, TrainingArguments
 import torch
-import time
-
-from evaluation import evaluate_position
 from joblib import Parallel, delayed
 
-#dataset_path = "data/data_300k_01.json"
-dataset_path = "data/subset_data.json"
-dataset = load_dataset("json", data_files=dataset_path, split="train")
-print("loaded dataset")
+from dataset.chessDataset import ChessDataset
+from evaluation import evaluate_position
+from batch_eval import batch_eval
 
+
+dataset_path = "data/small_data.json"
+pgn_path = 'data/lichess_db_standard_rated_2017-03.pgn'
+if not os.path.exists(dataset_path):
+    _ = ChessDataset(pgn_path=pgn_path, use_FEN=True, num_games=1000, end_in='white', save_processed_to_json=dataset_path)
+dataset = load_dataset('json', data_files=dataset_path, split='train')
+
+save_name = time.strftime("%Y%m%d-%H%M%S")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"using device {device}")
 
-"""
-def reward_move(completions, **kwargs):
-    prompts = kwargs["prompts"]
-    
-    results = Parallel(n_jobs=8)(  # Adjust number of jobs to your CPU cores
-        delayed(evaluate_position)(
-            prompt.strip(),
-            completion.strip(),
-            stockfish_path="stockfish/stockfish-ubuntu-x86-64-avx2"
-        )
-        for prompt, completion in zip(prompts, completions)
-    )
-    
-    # Extract first item from each result if evaluate_position returns a tuple
-    return [score[0] for score in results]
-"""
 
 def reward_move(completions, **kwargs):
-    start = time.time()
     prompts = kwargs["prompts"]
-    rewards = []
-    for prompt, completion in zip(prompts, completions):
-      sf_eval = evaluate_position(prompt.strip(), completion.strip(), stockfish_path="stockfish/stockfish-ubuntu-x86-64-avx2")
-      rewards.append(sf_eval[0])
-    end = time.time()
-    f = open("log.log", "a")
-    f.write(f"{len(prompts)} {start} {end} {end-start}\n")
-    f.close()
+    rewards = batch_eval(prompts, completions, 24, enable_tqdm=False)
     return rewards
-    #return [1.0 for _ in range(len(prompts))]
 
-model = AutoModelForCausalLM.from_pretrained("finetuned_models/fb-chess-model-final")
-print("on device: ", model.device)
-model.to(device)
-print("now on: ", model.device)
 
-training_args = GRPOConfig(output_dir="fb_grpo_model", 
-  logging_steps=10,
+model = AutoModelForCausalLM.from_pretrained("saved/models/fb-chess-model-final").to(device)
+
+training_args = GRPOConfig(
+  output_dir="fb_grpo_model", 
   per_device_train_batch_size=24,
   num_train_epochs=3,
+  save_strategy='no',
+  report_to='none'
 )
 
 trainer = GRPOTrainer(
@@ -65,3 +46,6 @@ trainer = GRPOTrainer(
   train_dataset=dataset,
 )
 trainer.train()
+
+trainer.save_model(f'saved/models/GRPO_{save_name}')
+trainer.tokenizer.save_pretrained(f'saved/tokenizers/GRPO_{save_name}')
