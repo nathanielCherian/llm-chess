@@ -478,27 +478,27 @@ def getIllegalMoveType(fen, board, san):
             return 'Empty square is not empty'
 
 
-    # Check if the castling is legal
-    row = 7 if white_to_move else 0
-
-    if move_type == 'Long castling':
-        if matrix[row][4] != 'K':
-            return 'Illegal castling'
-        if matrix[row][0] != 'R':
-            return 'Illegal castling'
-        if matrix[row][1] != '.' or matrix[row][2] != '.' or matrix[row][3] != '.':
-            return 'Castling through blocked squares'
-        
-    elif move_type == 'Short castling':
-        if matrix[row][4] != 'K':
-            return 'Illegal castling'
-        if matrix[row][7] != 'R':
-            return 'Illegal castling'
-        if matrix[row][5] != '.' or matrix[row][6] != '.':
-            return 'Castling through blocked squares'
-
-
     if move_type == 'Long castling' or move_type == 'Short castling':
+        # Check if the castling is legal
+        row = 7 if white_to_move else 0
+
+        if move_type == 'Long castling':
+            if matrix[row][4] != 'K':
+                return 'Illegal castling'
+            if matrix[row][0] != 'R':
+                return 'Illegal castling'
+            if matrix[row][1] != '.' or matrix[row][2] != '.' or matrix[row][3] != '.':
+                return 'Castling through blocked squares'
+            
+        elif move_type == 'Short castling':
+            if matrix[row][4] != 'K':
+                return 'Illegal castling'
+            if matrix[row][7] != 'R':
+                return 'Illegal castling'
+            if matrix[row][5] != '.' or matrix[row][6] != '.':
+                return 'Castling through blocked squares'
+
+
         castle_board = chess.Board(board.fen())
 
         row = '1' if white_to_move else '8'
@@ -569,7 +569,7 @@ def getIllegalMoveType(fen, board, san):
         piece = chess.Piece.from_symbol(piece_type if white_to_move else piece_type.lower())
         trial_board.set_piece_at(chess.parse_square(dst), piece)
 
-        new_matrix = fen_to_matrix(trial_board.fen())
+        #new_matrix = fen_to_matrix(trial_board.fen())
         #print(new_matrix)
 
         if failToRemoveCheck(board, trial_board):
@@ -604,24 +604,28 @@ def evaluate_position(fen, san, time=0.1):
         info = engine.analyse(board, limit)
         
         if "score" in info:
-            bound = 1000
+            scale = 500
+            mate_bound = 10
 
-
-            # TODO: currently not using negative scores for black
             score = info["score"].white() if not board.turn else info["score"].black()
-
-
             print("Score:", score)
 
             if score.is_mate():
                 mate = score.mate()
+
                 if mate >= 0:
-                    return 1.0, "Valid move"
+                    mate = min(mate, mate_bound)
+                    score = 1 - ((mate / mate_bound) * 0.1)
+                    return score, "Valid move"
                 else:
-                    return 0.0, "Valid move"
+                    mate = abs(max(mate, - mate_bound))
+                    score = ((mate - 1) / (mate_bound - 1)) * 0.1
+                    return score, "Valid move"
+
             else:
-                cp = max(min(score.score(), bound), - bound)
-                return (cp + bound) / (2 * bound), "Valid move"
+                score = 1 / (1 + 10 ** (- score.score() / scale))
+                score = 0.8 * score + 0.1
+                return score, "Valid move"
 
         return (0.5, "Valid move")
     
@@ -636,22 +640,24 @@ def evaluate_position(fen, san, time=0.1):
             print(e)
             traceback.print_exc()
             return (0, 'getIllegalMoveType error')
-    except:
-            return (0, 'Unknown error')
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
+        return (0, 'Unknown error')
     finally:
         engine.quit()
 
 if __name__ == "__main__":
     # Example usage
 
-    fen = "7K/8/8/6r1/5q2/8/P7/6k1 w - - 0 1"
-    san = "a3"
+    #fen = "7K/8/8/6r1/5q2/8/P7/6k1 w - - 0 1"
+    #san = "a3"
 
     #fen = "rnbqkbnr/pppppppp/8/8/7q/8/PPPPPPP1/RNBQK3 b KQkq - 0 0"
     #san = "Qh1"
 
-    #fen = "rnbqk3/ppppppp1/8/8/7Q/8/PPPPPPP1/RNBQK3 w KQkq - 0 0"
-    #san = "Qh8"
+    fen = "rnbqk3/ppppppp1/8/8/7Q/8/PPPPPPP1/RNBQK3 w KQkq - 0 0"
+    san = "Qh7"
     
     score, message = evaluate_position(fen, san)
     print(f"Score: {score}, Message: {message}")
