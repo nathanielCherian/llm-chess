@@ -590,7 +590,7 @@ def getIllegalMoveType(fen, board, san):
 
 
 
-def evaluate_position(fen, san, time=0.1):
+def evaluate_position(fen, san, time=0.1, return_score_only=False):
     board = chess.Board(fen)
     engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
     limit = chess.engine.Limit(time=time)
@@ -608,7 +608,7 @@ def evaluate_position(fen, san, time=0.1):
             mate_bound = 10
 
             score = info["score"].white() if not board.turn else info["score"].black()
-            print("Score:", score)
+            # print("Score:", score)
 
             if score.is_mate():
                 mate = score.mate()
@@ -616,33 +616,51 @@ def evaluate_position(fen, san, time=0.1):
                 if mate >= 0:
                     mate = min(mate, mate_bound)
                     score = 1 - ((mate / mate_bound) * 0.1)
+                    if return_score_only:
+                        return score
                     return score, "Valid move"
                 else:
                     mate = abs(max(mate, - mate_bound))
                     score = ((mate - 1) / (mate_bound - 1)) * 0.1
+                    if return_score_only:
+                        return score
                     return score, "Valid move"
 
             else:
                 score = 1 / (1 + 10 ** (- score.score() / scale))
                 score = 0.8 * score + 0.1
+                if return_score_only:
+                    return score
                 return score, "Valid move"
 
+        if return_score_only:
+            return 0.5
         return (0.5, "Valid move")
     
     except chess.InvalidMoveError:
+        if return_score_only:
+            return 0
         return (0, 'Bad format')
     except chess.AmbiguousMoveError:
+        if return_score_only:
+            return 0
         return (0, 'Ambiguous format')
     except chess.IllegalMoveError:
         try:
+            if return_score_only:
+                return 0
             return (0, getIllegalMoveType(fen, board, san))
         except Exception as e:
-            print(e)
-            traceback.print_exc()
+            # print(e)
+            # traceback.print_exc()
+            if return_score_only:
+                return 0
             return (0, 'getIllegalMoveType error')
     except Exception as e:
         print(e)
         traceback.print_exc()
+        if return_score_only:
+            return 0
         return (0, 'Unknown error')
     finally:
         engine.quit()
