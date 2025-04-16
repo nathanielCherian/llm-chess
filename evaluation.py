@@ -1,5 +1,6 @@
 
-# NOTE: you must call the globals to set up the engine, then it will run until you call engine.quit()
+# NOTE: engine = None
+# This will casuse an error, you must change this to your stockfish executable path
 
 
 # -----------------
