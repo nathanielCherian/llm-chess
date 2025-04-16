@@ -407,15 +407,18 @@ def getIllegalMoveType(fen, board, san):
 
 
     # Check for checkmate or check
-    if san[-1] == '#':
-        san = san[:-1]
-        if board.is_legal(board.parse_san(san)):
-            return 'Incorrect checkmate indication'
-    elif san[-1] == '+':
-        san = san[:-1]
-        if board.is_legal(board.parse_san(san)):
-            return 'Incorrect check indication'
-        
+    try:
+        if san[-1] == '#':
+            san = san[:-1]
+            if board.is_legal(board.parse_san(san)):
+                return 'Incorrect checkmate indication'
+        elif san[-1] == '+':
+            san = san[:-1]
+            if board.is_legal(board.parse_san(san)):
+                return 'Incorrect check indication'
+    except:
+        pass
+
 
     # Get the piece type
     piece_type = None
@@ -591,8 +594,13 @@ def getIllegalMoveType(fen, board, san):
 
 
 def evaluate_position(fen, san, time=0.1, return_score_only=False):
+
     board = chess.Board(fen)
-    engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
+
+    engine = None
+    #engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
+    #engine = chess.engine.SimpleEngine.popen_uci(r"C:\Stockfish\stockfish-windows-x86-64-avx2.exe")
+
     limit = chess.engine.Limit(time=time)
 
     try:
@@ -616,12 +624,14 @@ def evaluate_position(fen, san, time=0.1, return_score_only=False):
                 if mate >= 0:
                     mate = min(mate, mate_bound)
                     score = 1 - ((mate / mate_bound) * 0.1)
+
                     if return_score_only:
                         return score
                     return score, "Valid move"
                 else:
                     mate = abs(max(mate, - mate_bound))
                     score = ((mate - 1) / (mate_bound - 1)) * 0.1
+
                     if return_score_only:
                         return score
                     return score, "Valid move"
@@ -629,6 +639,7 @@ def evaluate_position(fen, san, time=0.1, return_score_only=False):
             else:
                 score = 1 / (1 + 10 ** (- score.score() / scale))
                 score = 0.8 * score + 0.1
+
                 if return_score_only:
                     return score
                 return score, "Valid move"
@@ -639,29 +650,34 @@ def evaluate_position(fen, san, time=0.1, return_score_only=False):
     
     except chess.InvalidMoveError:
         if return_score_only:
-            return 0
-        return (0, 'Bad format')
+            return -1
+        return (-1, 'Bad format')
+    
     except chess.AmbiguousMoveError:
         if return_score_only:
-            return 0
-        return (0, 'Ambiguous format')
+            return -1
+        return (-1, 'Ambiguous format')
+    
     except chess.IllegalMoveError:
         try:
             if return_score_only:
-                return 0
-            return (0, getIllegalMoveType(fen, board, san))
+                return -1
+            return (-1, getIllegalMoveType(fen, board, san))
+        
         except Exception as e:
             # print(e)
             # traceback.print_exc()
+
             if return_score_only:
-                return 0
-            return (0, 'getIllegalMoveType error')
+                return -1
+            return (-1, 'getIllegalMoveType error')
     except Exception as e:
-        print(e)
-        traceback.print_exc()
+        # print(e)
+        # traceback.print_exc()
+
         if return_score_only:
-            return 0
-        return (0, 'Unknown error')
+            return 0.5
+        return (0.5, 'Unknown error')
     finally:
         engine.quit()
 
@@ -674,8 +690,11 @@ if __name__ == "__main__":
     #fen = "rnbqkbnr/pppppppp/8/8/7q/8/PPPPPPP1/RNBQK3 b KQkq - 0 0"
     #san = "Qh1"
 
-    fen = "rnbqk3/ppppppp1/8/8/7Q/8/PPPPPPP1/RNBQK3 w KQkq - 0 0"
-    san = "Qh7"
+    #fen = "rnbqk3/ppppppp1/8/8/7Q/8/PPPPPPP1/RNBQK3 w KQkq - 0 0"
+    #san = "Qh7"
+
+    fen = '8/7Q/6p1/p3p3/3q3P/P3k3/1KP5/8 w - - 3 42'
+    san = 'Qg4+'
     
     score, message = evaluate_position(fen, san)
     print(f"Score: {score}, Message: {message}")
