@@ -6,8 +6,8 @@ from evaluation import evaluate_position
 class GRPOBot():
     def __init__(self):
         self.board = chess.Board()
-        self.model = AutoModelForCausalLM.from_pretrained('saved/models/GRPO_20250413-174516')
-        self.tokenizer = AutoTokenizer.from_pretrained('saved/tokenizers/GRPO_20250413-174516')
+        self.model = AutoModelForCausalLM.from_pretrained('saved/models/final_model')
+        self.tokenizer = AutoTokenizer.from_pretrained('saved/tokenizers/final_model')
         self.num_times_regen = 0
         self.num_moves_regen = 0
         self.num_fails = 0
@@ -15,18 +15,21 @@ class GRPOBot():
     def end(self):
         print(f'num moves regened: {self.num_moves_regen}, num times regened: {self.num_times_regen}, num failures: {self.num_fails}')
 
-    def generate_text(self, prompt, p=0.7):
+    def generate_text(self, prompt, p=0.7, do_sample=True):
         inputs = self.tokenizer(prompt, return_tensors='pt').to(self.model.device)
-        outputs = self.model.generate(
-            **inputs,
-            max_length=100,
-            do_sample=True,
-            top_p=p
-        )
+        if do_sample:
+            outputs = self.model.generate(
+                **inputs,
+                max_length=100,
+                do_sample=True,
+                top_p=p
+            )
+        else:
+            outputs = self.model.generate(**inputs)
         return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     def get_move(self, fen):
-        res = self.generate_text(fen)[len(fen):]
+        res = self.generate_text(fen, do_sample=False)[len(fen):]
         p = 0.7
 
         if evaluate_position(fen, res)[1] != 'Valid move':

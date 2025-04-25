@@ -2,8 +2,9 @@ import chess
 
 
 class StockfishBot():
-    def __init__(self, path, depth=20, time=0.1):
+    def __init__(self, path, depth=20, time=0.1, strength=20):
         self.stockfish = chess.engine.SimpleEngine.popen_uci(path)
+        self.stockfish.configure({'Skill Level' : strength})
         self.depth = depth
         self.time = time
 
